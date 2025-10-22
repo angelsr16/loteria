@@ -6,6 +6,7 @@ import { Room } from "./types/Room";
 import { generateJoinCode } from "./utils/generateJoinCode";
 import { shuffleDeck } from "./utils/shuffleDeck";
 import { Player } from "./types/Player";
+import { generateBoard } from "./utils/generateBoard";
 
 const app = express();
 
@@ -120,7 +121,7 @@ const startGame = (room: Room) => {
 
   const number = deck[index++];
   room.numbersCalled.push(number);
-  io.to(room.code).emit("gameStarted");
+  io.to(room.code).emit("gameStarted", generateBoard());
   io.to(room.code).emit("numberCalled", number);
 
   room.interval = setInterval(() => {

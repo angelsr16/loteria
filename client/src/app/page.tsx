@@ -52,11 +52,11 @@ export default function Home() {
       setPlayer(data.player);
     });
 
-    socket.on("gameStarted", () => {
+    socket.on("gameStarted", (data) => {
       setGame((prev) => ({
         ...prev,
         state: "in-progress",
-        board: handleGenerateBoard(),
+        board: { ...data },
       }));
     });
 
@@ -101,21 +101,6 @@ export default function Home() {
     }
   };
 
-  const handleGenerateBoard = (): Board => {
-    const numbers = new Set<number>();
-
-    while (numbers.size < 16) {
-      numbers.add(Math.floor(Math.random() * 54) + 1);
-    }
-
-    const cards: Card[] = Array.from(numbers).map((number) => ({
-      number,
-      isMarked: false,
-    }));
-
-    return { cards };
-  };
-
   const handleMarkCard = (cardIndex: number) => {
     if (!game.board) return;
 
@@ -138,7 +123,7 @@ export default function Home() {
     <>
       {game.state === "no-game" ? (
         <div className="flex justify-center items-center h-screen">
-          <div className="xl:w-1/3 md:w-1/2 mx-10 w-full border-white border rounded-md md:p-10 p-4">
+          <div className="xl:w-1/3 md:w-1/2 mx-10 w-full border-slate-600 border rounded-md md:p-10 p-4">
             <div className="flex flex-col gap-3">
               <input
                 type="text"
@@ -286,8 +271,8 @@ export default function Home() {
           )}
 
           <div
-            className={`fixed bottom-10 right-10 bg-white/10 rounded-md p-2 ${
-              displayHUD && "min-h-72 min-w-72"
+            className={`fixed z-100 bottom-5 right-5 bg-white/10 rounded-md p-2 ${
+              displayHUD && "min-h-64 min-w-72"
             }`}
           >
             <div className="flex justify-between items-end gap-5">
@@ -312,8 +297,8 @@ export default function Home() {
             {displayHUD && (
               <div className="grid grid-rows-2 p-2">
                 {game.players.map((player, index) => (
-                  <span className="text-xs" key={index}>
-                    {player.username}{" "}
+                  <span className="text-sm font-bold" key={index}>
+                    <span className="underline">{player.username}</span>{" "}
                     {game.state === "waiting" && (
                       <span
                         className={`
