@@ -1,3 +1,4 @@
+import { Board } from "./Board";
 import { Player } from "./Player";
 
 export interface Game {
@@ -5,5 +6,5 @@ export interface Game {
   cardsCalled: number[];
   currentCard: number;
   state: "no-game" | "waiting" | "in-progress" | "finished";
-  board: number[];
+  board?: Board;
 }

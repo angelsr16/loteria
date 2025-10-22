@@ -1,19 +1,22 @@
 "use client";
+import { Board } from "@/types/Board";
 import { Game } from "@/types/Game";
 import { Player } from "@/types/Player";
 import { Cards } from "@/utils/cards";
+import { Card } from "@/types/Board";
 import { useCallback, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 
 const SERVER_URL = "http://localhost:4000";
 
 export default function Home() {
+  const [displayHUD, setDisplayHUD] = useState(true);
+
   const [game, setGame] = useState<Game>({
     players: [],
     cardsCalled: [],
     currentCard: -1,
     state: "no-game" as "no-game" | "waiting" | "in-progress" | "finished",
-    board: [],
   });
 
   const [player, setPlayer] = useState<Player>({
@@ -62,7 +65,11 @@ export default function Home() {
     });
 
     socket.on("numberCalled", (data) => {
-      setGame((prev) => ({ ...prev, currentCard: data }));
+      setGame((prev) => ({
+        ...prev,
+        currentCard: data,
+        cardsCalled: [...prev.cardsCalled, data],
+      }));
     });
   }, []);
 
@@ -94,14 +101,31 @@ export default function Home() {
     }
   };
 
-  const handleGenerateBoard = (): number[] => {
+  const handleGenerateBoard = (): Board => {
     const numbers = new Set<number>();
 
     while (numbers.size < 16) {
-      const random = Math.floor(Math.random() * (54 - 1 + 1)) + 1;
-      numbers.add(random);
+      numbers.add(Math.floor(Math.random() * 54) + 1);
     }
-    return Array.from(numbers);
+
+    const cards: Card[] = Array.from(numbers).map((number) => ({
+      number,
+      isMarked: false,
+    }));
+
+    return { cards };
+  };
+
+  const handleMarkCard = (cardIndex: number) => {
+    setGame((prev) => ({
+      ...prev,
+      board: {
+        ...prev.board,
+        cards: (prev.board ? prev.board.cards : []).map((card, index) =>
+          index === cardIndex ? { ...card, isMarked: !card.isMarked } : card
+        ),
+      },
+    }));
   };
 
   return (
@@ -162,78 +186,124 @@ export default function Home() {
           </div>
         </div>
       ) : (
-        <div className="w-full h-screen flex flex-col items-center p-5">
+        <div className="w-full h-screen flex flex-col items-center md:p-10 p-5">
           {game.state === "waiting" && (
             <h1 className="text-3xl mb-5">
               Room Code: <span className="font-semibold">{player.room}</span>
             </h1>
           )}
 
-          <div className="w-full flex-1 flex gap-5 overflow-hidden">
+          <div className="w-2/3 h-full flex-1 flex lg:gap-5 ">
             {/* --- BOARD SECTION --- */}
-            <div className="w-full rounded-md p-5 flex flex-col gap-10 overflow-hidden">
-              <div className="flex-1 flex md:flex-row flex-col justify-center gap-20 overflow-hidden">
-                {game.board.length > 0 && (
-                  <div>
-                    <div className="grid grid-cols-4 grid-rows-4 gap-1 bg-white w-full h-full">
-                      {game.board.map((card, index) => (
-                        <div key={index} className="w-full h-full">
-                          <img
-                            className="w-full h-full bg-white"
-                            src={Cards[card - 1].image}
-                            alt={Cards[card - 1].title}
-                          />
-                        </div>
-                      ))}
-                    </div>
+            <div className="w-full flex lg:flex-row flex-col lg:gap-10 gap-5">
+              <div className="w-full h-full flex justify-center items-center">
+                {game.board && (
+                  <div className="grid grid-cols-4 grid-rows-4 gap-1 bg-white xl:w-2/3 w-full h-full">
+                    {game.board.cards.map((card, index) => (
+                      <div
+                        key={index}
+                        className="w-full h-full relative bg-blue-500 border border-black"
+                      >
+                        <img
+                          draggable={false}
+                          onClick={() => {
+                            handleMarkCard(index);
+                          }}
+                          className="w-full h-full bg-white"
+                          src={Cards[card.number - 1].image}
+                          alt={Cards[card.number - 1].title}
+                        />
+                        {card.isMarked && (
+                          <span className="absolute w-full h-full bg-black/30 top-0 flex justify-center items-center text-red-700 text-8xl">
+                            X
+                          </span>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )}
-                <div className="w-64 flex flex-col justify-center items-end">
-                  {game.currentCard !== -1 && (
-                    <>
-                      <img
-                        className="w-5/6 p-1 bg-white"
-                        src={`${Cards[game.currentCard - 1].image}`}
-                        alt="card"
-                      />
-                    </>
-                  )}
-                </div>
               </div>
 
-              <div className="flex justify-center">
-                {game.state === "waiting" && (
-                  <>
-                    {player && !player.ready && (
-                      <button
-                        onClick={handlePlayerReady}
-                        className="bg-green-800 hover:bg-green-700 cursor-pointer px-2 py-1 rounded-md font-semibold text-2xl"
-                      >
-                        Ready
-                      </button>
-                    )}
-                  </>
+              <div className="h-full flex lg:flex-col flex-row gap-5 justify-center items-center">
+                {game.cardsCalled.length > 1 && (
+                  <div className="flex flex-col items-center rounded-md border border-slate-500 px-8 py-5">
+                    <>
+                      <span className="font-semibold text-2xl text-center">
+                        Anterior
+                      </span>
+                      <div className="w-32">
+                        <img
+                          className="w-full p-1 bg-white"
+                          src={`${
+                            Cards[
+                              game.cardsCalled[game.cardsCalled.length - 2] - 1
+                            ].image
+                          }`}
+                          alt="card"
+                        />
+                      </div>
+                    </>
+                  </div>
+                )}
+
+                {game.currentCard !== -1 && (
+                  <div className="flex flex-col items-center rounded-md border border-slate-500 px-8 py-5">
+                    <>
+                      <span className="font-semibold text-2xl text-center">
+                        Actual
+                      </span>
+                      <div className="w-32">
+                        <img
+                          className="w-full p-1 bg-white"
+                          src={`${Cards[game.currentCard - 1].image}`}
+                          alt="card"
+                        />
+                      </div>
+                    </>
+                  </div>
                 )}
               </div>
             </div>
+          </div>
 
-            <div className="absolute bottom-10 right-10 bg-white/10 rounded-md p-2 min-h-72 min-w-72">
-              <div className="flex justify-between items-end">
-                <div className="flex gap-1">
-                  <span className="cursor-pointer px-2 py-1 bg-slate-900 hover:bg-slate-700 rounded-md font-semibold">
-                    Players ({game.players.length})
-                  </span>
-                  <span className="cursor-pointer px-2 py-1 bg-slate-900 hover:bg-slate-700 rounded-md font-semibold">
-                    Chat
-                  </span>
-                </div>
+          {game.state === "waiting" && (
+            <div className="flex justify-center">
+              {player && !player.ready && (
+                <button
+                  onClick={handlePlayerReady}
+                  className="bg-green-800 hover:bg-green-700 cursor-pointer px-2 py-1 rounded-md font-semibold text-2xl"
+                >
+                  Ready
+                </button>
+              )}
+            </div>
+          )}
 
-                <div>
-                  <span className="text-xs text-blue-500 cursor-pointer">
-                    Hide
-                  </span>
-                </div>
+          <div
+            className={`fixed bottom-10 right-10 bg-white/10 rounded-md p-2 ${
+              displayHUD && "min-h-72 min-w-72"
+            }`}
+          >
+            <div className="flex justify-between items-end gap-5">
+              <div className="flex gap-1">
+                <span className="text-sm cursor-pointer px-2 py-1 bg-slate-900 hover:bg-slate-700 rounded-md font-semibold">
+                  Players ({game.players.length})
+                </span>
+                <span className="text-sm cursor-pointer px-2 py-1 bg-slate-900 hover:bg-slate-700 rounded-md font-semibold">
+                  Chat
+                </span>
               </div>
+
+              <div>
+                <span
+                  onClick={() => setDisplayHUD(!displayHUD)}
+                  className="text-xs text-blue-500 cursor-pointer"
+                >
+                  {!displayHUD ? "Show" : "Hide"}
+                </span>
+              </div>
+            </div>
+            {displayHUD && (
               <div className="grid grid-rows-2 p-2">
                 {game.players.map((player, index) => (
                   <span className="text-xs" key={index}>
@@ -250,7 +320,7 @@ export default function Home() {
                   </span>
                 ))}
               </div>
-            </div>
+            )}
           </div>
         </div>
       )}
