@@ -1,5 +1,6 @@
 "use client";
 import { Player } from "@/types/Player";
+import { Cards } from "@/utils/cards";
 import { useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 
@@ -9,16 +10,16 @@ export default function Home() {
 
   const [currentPanel, setCurrentPanel] = useState<"home" | "game">("home");
   const [players, setPlayers] = useState<Player[]>([]);
+
   const [currentPlayer, setCurrentPlayer] = useState<Player>();
+  const [currentCard, setCurrentCard] = useState();
+  const [gameState, setGameState] = useState<
+    "no-game" | "waiting" | "in-progress" | "finished"
+  >("no-game");
+
+  const [currentBoard, setCurrentBoard] = useState<number[]>([]);
 
   const socketRef = useRef<Socket | null>(null);
-
-  // useEffect(() => {
-  //   const username = localStorage.getItem("username");
-  //   if (username) {
-  //     setUsername(username);
-  //   }
-  // }, []);
 
   const handleCreateGame = () => {
     if (username === "") return;
@@ -37,16 +38,7 @@ export default function Home() {
       setCurrentPlayer(data.player);
     });
 
-    socketRef.current.on("updatePlayers", (data) => {
-      setPlayers((prevPlayers) => [...data]);
-    });
-
-    socketRef.current.on("numberCalled", (data) => {});
-
-    // 🔹 Automatically disconnect when page closes or reloads
-    window.addEventListener("beforeunload", () => {
-      socketRef.current?.disconnect();
-    });
+    handleSetSocketEvents();
   };
 
   const handleJoinGame = () => {
@@ -62,11 +54,27 @@ export default function Home() {
       setCurrentPlayer(data.player);
     });
 
+    handleSetSocketEvents();
+  };
+
+  const handleSetSocketEvents = () => {
+    if (!socketRef.current) return;
+
+    setGameState("waiting");
+
+    socketRef.current.on("gameStarted", () => {
+      setGameState("in-progress");
+      setCurrentBoard(handleGenerateBoard());
+    });
+
     socketRef.current.on("updatePlayers", (data) => {
       setPlayers((prevPlayers) => [...data]);
     });
 
-    // 🔹 Automatically disconnect when page closes or reloads
+    socketRef.current.on("numberCalled", (data) => {
+      setCurrentCard(data);
+    });
+
     window.addEventListener("beforeunload", () => {
       socketRef.current?.disconnect();
     });
@@ -79,9 +87,18 @@ export default function Home() {
     }
   };
 
+  const handleGenerateBoard = () => {
+    const numbers = new Set<number>();
+
+    while (numbers.size < 16) {
+      const random = Math.floor(Math.random() * (54 - 1 + 1)) + 1;
+      numbers.add(random);
+    }
+    return Array.from(numbers);
+  };
+
   return (
     <>
-      {currentPanel}
       {currentPanel === "home" ? (
         <div className="flex justify-center items-center h-screen">
           <div className="xl:w-1/3 md:w-1/2 mx-10 w-full border-white border rounded-md md:p-10 p-4">
@@ -138,48 +155,83 @@ export default function Home() {
             Join Code: <span className="font-semibold">{joinCode}</span>
           </h1>
 
-          <div className="w-full h-full flex gap-5">
-            <div className="w-2/3 border border-white rounded-md p-5 flex flex-col">
-              <div className="flex-1"></div>
+          <div className="w-full flex-1 flex gap-5 overflow-hidden">
+            {/* --- BOARD SECTION --- */}
+            <div className="w-full rounded-md p-5 flex flex-col gap-10 overflow-hidden">
+              <div className="flex-1 flex md:flex-row flex-col justify-center gap-20 overflow-hidden">
+                {currentBoard.length > 0 && (
+                  <div>
+                    <div className="grid grid-cols-4 grid-rows-4 gap-1 bg-white w-full h-full">
+                      {currentBoard.map((card, index) => (
+                        <div key={index} className="w-full h-full">
+                          <img
+                            className="w-full h-full bg-white"
+                            src={Cards[card - 1].image}
+                            alt={Cards[card - 1].title}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div className="w-64 flex flex-col justify-center items-end">
+                  {currentCard && (
+                    <>
+                      <img
+                        className="w-5/6 p-1 bg-white"
+                        src={`${Cards[currentCard - 1].image}`}
+                        alt="card"
+                      />
+                    </>
+                  )}
+                </div>
+              </div>
+
               <div className="flex justify-center">
-                {currentPlayer && !currentPlayer.ready ? (
-                  <button
-                    onClick={handlePlayerReady}
-                    className="bg-green-800 hover:bg-green-700 cursor-pointer px-2 py-1 rounded-md font-semibold text-2xl"
-                  >
-                    Ready
-                  </button>
-                ) : (
+                {gameState === "waiting" && (
                   <>
-                    {currentPlayer?.owner && (
+                    {currentPlayer && !currentPlayer.ready ? (
                       <button
                         onClick={handlePlayerReady}
-                        className="bg-blue-600 hover:bg-blue-500 cursor-pointer px-2 py-1 rounded-md font-semibold text-2xl disabled:bg-gray-500 disabled:cursor-not-allowed"
-                        disabled={!players.every((p) => p.ready)}
+                        className="bg-green-800 hover:bg-green-700 cursor-pointer px-2 py-1 rounded-md font-semibold text-2xl"
                       >
-                        Start Game
+                        Ready
                       </button>
+                    ) : (
+                      <>
+                        {currentPlayer?.owner && (
+                          <button
+                            onClick={handlePlayerReady}
+                            className="bg-blue-600 hover:bg-blue-500 cursor-pointer px-2 py-1 rounded-md font-semibold text-2xl disabled:bg-gray-500 disabled:cursor-not-allowed"
+                            disabled={!players.every((p) => p.ready)}
+                          >
+                            Start Game
+                          </button>
+                        )}
+                      </>
                     )}
                   </>
                 )}
               </div>
             </div>
 
-            <div className="w-1/3 border-white border rounded-md p-5">
-              <p className="text-3xl font-semibold mb-5">
+            <div className="absolute bottom-10 right-10 bg-white/10 rounded-md p-5">
+              <p className="text-xl font-semibold mb-5">
                 Players: ({players.length})
               </p>
-              <div className="flex flex-col">
+              <div className="grid grid-rows-2">
                 {players.map((player, index) => (
-                  <span className="text-2xl" key={index}>
+                  <span className="text-xs" key={index}>
                     {player.username}{" "}
-                    <span
-                      className={`
+                    {gameState === "waiting" && (
+                      <span
+                        className={`
                       font-bold
                       ${player.ready ? "text-green-500" : "text-yellow-500"}`}
-                    >
-                      ({player.ready ? "ready" : "waiting..."})
-                    </span>
+                      >
+                        ({player.ready ? "ready" : "waiting..."})
+                      </span>
+                    )}
                   </span>
                 ))}
               </div>
