@@ -44,7 +44,7 @@ io.on("connection", (socket) => {
     };
     rooms.set(code, room);
     socket.join(code);
-    socket.emit("roomCreated", { code, player: newPlayer });
+    socket.emit("joinedRoom", { player: newPlayer });
     io.to(code).emit("updatePlayers", room.players);
     console.log(`Room created: ${code} by ${username}`);
   });
@@ -69,7 +69,7 @@ io.on("connection", (socket) => {
 
     room.players.push(newPlayer);
     socket.join(code);
-    io.to(code).emit("joinedRoom", { code, player: newPlayer });
+    socket.emit("joinedRoom", { player: newPlayer });
     io.to(code).emit("updatePlayers", room.players);
     console.log(`${username} joined room ${code}`);
   });

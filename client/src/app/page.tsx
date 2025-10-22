@@ -1,93 +1,100 @@
 "use client";
+import { Game } from "@/types/Game";
 import { Player } from "@/types/Player";
 import { Cards } from "@/utils/cards";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 
+const SERVER_URL = "http://localhost:4000";
+
 export default function Home() {
-  const [username, setUsername] = useState("");
-  const [joinCode, setJoinCode] = useState("");
+  const [game, setGame] = useState<Game>({
+    players: [],
+    cardsCalled: [],
+    currentCard: -1,
+    state: "no-game" as "no-game" | "waiting" | "in-progress" | "finished",
+    board: [],
+  });
 
-  const [currentPanel, setCurrentPanel] = useState<"home" | "game">("home");
-  const [players, setPlayers] = useState<Player[]>([]);
-
-  const [currentPlayer, setCurrentPlayer] = useState<Player>();
-  const [currentCard, setCurrentCard] = useState();
-  const [gameState, setGameState] = useState<
-    "no-game" | "waiting" | "in-progress" | "finished"
-  >("no-game");
-
-  const [currentBoard, setCurrentBoard] = useState<number[]>([]);
+  const [player, setPlayer] = useState<Player>({
+    id: "",
+    username: "",
+    room: "",
+    ready: false,
+  });
 
   const socketRef = useRef<Socket | null>(null);
 
+  const connectSocket = useCallback((onConnect?: (socket: any) => void) => {
+    if (socketRef.current) return socketRef.current;
+    const socket = io(SERVER_URL);
+
+    if (onConnect) {
+      socket.on("connect", () => {
+        onConnect(socket);
+      });
+    }
+
+    socketRef.current = socket;
+    return socket;
+  }, []);
+
+  const bindSocketEvents = useCallback(() => {
+    const socket = connectSocket();
+    if (!socket) return;
+
+    setGame((prev) => ({ ...prev, state: "waiting" }));
+
+    socket.on("joinedRoom", (data) => {
+      setPlayer(data.player);
+    });
+
+    socket.on("gameStarted", () => {
+      setGame((prev) => ({
+        ...prev,
+        state: "in-progress",
+        board: handleGenerateBoard(),
+      }));
+    });
+
+    socket.on("updatePlayers", (data: Player[]) => {
+      setGame((prev) => ({ ...prev, players: [...data] }));
+    });
+
+    socket.on("numberCalled", (data) => {
+      setGame((prev) => ({ ...prev, currentCard: data }));
+    });
+  }, []);
+
   const handleCreateGame = () => {
-    if (username === "") return;
+    if (player.username === "") return;
 
-    // Connect to the server
-    socketRef.current = io("http://localhost:4000");
-
-    socketRef.current.on("connect", () => {
-      socketRef.current?.emit("createRoom", { username });
+    connectSocket((socket) => {
+      socket.emit("createRoom", { username: player.username });
     });
 
-    // Events
-    socketRef.current.on("roomCreated", (data) => {
-      setCurrentPanel("game");
-      setJoinCode(data.code);
-      setCurrentPlayer(data.player);
-    });
-
-    handleSetSocketEvents();
+    bindSocketEvents();
   };
 
   const handleJoinGame = () => {
-    socketRef.current = io("http://localhost:4000");
+    if (player.username === "" || player.room === "") return;
 
-    socketRef.current.on("connect", () => {
-      socketRef.current?.emit("joinRoom", { code: joinCode, username });
+    connectSocket((socket) => {
+      socket.emit("joinRoom", { code: player.room, username: player.username });
     });
 
-    socketRef.current.on("joinedRoom", (data) => {
-      setCurrentPanel("game");
-      setJoinCode(data.code);
-      setCurrentPlayer(data.player);
-    });
-
-    handleSetSocketEvents();
-  };
-
-  const handleSetSocketEvents = () => {
-    if (!socketRef.current) return;
-
-    setGameState("waiting");
-
-    socketRef.current.on("gameStarted", () => {
-      setGameState("in-progress");
-      setCurrentBoard(handleGenerateBoard());
-    });
-
-    socketRef.current.on("updatePlayers", (data) => {
-      setPlayers((prevPlayers) => [...data]);
-    });
-
-    socketRef.current.on("numberCalled", (data) => {
-      setCurrentCard(data);
-    });
-
-    window.addEventListener("beforeunload", () => {
-      socketRef.current?.disconnect();
-    });
+    bindSocketEvents();
   };
 
   const handlePlayerReady = () => {
-    if (currentPlayer) {
-      socketRef.current?.emit("playerReady", { code: joinCode });
-      currentPlayer.ready = true;
+    if (player) {
+      const socket = connectSocket();
+      socket.emit("playerReady", { code: player.room });
+      player.ready = true;
     }
   };
 
-  const handleGenerateBoard = () => {
+  const handleGenerateBoard = (): number[] => {
     const numbers = new Set<number>();
 
     while (numbers.size < 16) {
@@ -99,7 +106,7 @@ export default function Home() {
 
   return (
     <>
-      {currentPanel === "home" ? (
+      {game.state === "no-game" ? (
         <div className="flex justify-center items-center h-screen">
           <div className="xl:w-1/3 md:w-1/2 mx-10 w-full border-white border rounded-md md:p-10 p-4">
             <div className="flex flex-col gap-3">
@@ -107,9 +114,12 @@ export default function Home() {
                 type="text"
                 className="px-2 py-1 md:text-xl bg-transparent outline-none border-slate-800 border rounded-md"
                 placeholder="Username"
-                value={username}
+                value={player.username}
                 onChange={(evt) => {
-                  setUsername(evt.target.value);
+                  setPlayer((prev) => ({
+                    ...prev,
+                    username: evt.target.value,
+                  }));
                 }}
                 maxLength={25}
               />
@@ -118,7 +128,7 @@ export default function Home() {
               <button
                 type="button"
                 className="md:text-xl font-semibold bg-slate-800 rounded-md px-2 py-1 cursor-pointer hover:bg-slate-700 disabled:bg-gray-700 disabled:cursor-not-allowed"
-                disabled={username === ""}
+                disabled={player.username === ""}
                 onClick={handleCreateGame}
               >
                 CREATE GAME
@@ -129,9 +139,9 @@ export default function Home() {
                   type="text"
                   className="w-full px-2 py-1 md:text-xl bg-transparent outline-none border-slate-800 border rounded-md"
                   placeholder="Join Code"
-                  value={joinCode}
+                  value={player.room}
                   onChange={(evt) => {
-                    setJoinCode(evt.target.value);
+                    setPlayer((prev) => ({ ...prev, room: evt.target.value }));
                   }}
                   maxLength={5}
                 />
@@ -139,7 +149,9 @@ export default function Home() {
                 <button
                   className="w-full md:text-xl font-semibold bg-slate-800 rounded-md px-2 py-1 cursor-pointer hover:bg-slate-700 disabled:bg-gray-700 disabled:cursor-not-allowed"
                   disabled={
-                    joinCode === "" || joinCode.length < 5 || username === ""
+                    player.room === "" ||
+                    player.room.length < 5 ||
+                    player.username === ""
                   }
                   onClick={handleJoinGame}
                 >
@@ -150,19 +162,21 @@ export default function Home() {
           </div>
         </div>
       ) : (
-        <div className="w-full h-screen flex flex-col items-center p-10">
-          <h1 className="text-3xl mb-5">
-            Join Code: <span className="font-semibold">{joinCode}</span>
-          </h1>
+        <div className="w-full h-screen flex flex-col items-center p-5">
+          {game.state === "waiting" && (
+            <h1 className="text-3xl mb-5">
+              Room Code: <span className="font-semibold">{player.room}</span>
+            </h1>
+          )}
 
           <div className="w-full flex-1 flex gap-5 overflow-hidden">
             {/* --- BOARD SECTION --- */}
             <div className="w-full rounded-md p-5 flex flex-col gap-10 overflow-hidden">
               <div className="flex-1 flex md:flex-row flex-col justify-center gap-20 overflow-hidden">
-                {currentBoard.length > 0 && (
+                {game.board.length > 0 && (
                   <div>
                     <div className="grid grid-cols-4 grid-rows-4 gap-1 bg-white w-full h-full">
-                      {currentBoard.map((card, index) => (
+                      {game.board.map((card, index) => (
                         <div key={index} className="w-full h-full">
                           <img
                             className="w-full h-full bg-white"
@@ -175,11 +189,11 @@ export default function Home() {
                   </div>
                 )}
                 <div className="w-64 flex flex-col justify-center items-end">
-                  {currentCard && (
+                  {game.currentCard !== -1 && (
                     <>
                       <img
                         className="w-5/6 p-1 bg-white"
-                        src={`${Cards[currentCard - 1].image}`}
+                        src={`${Cards[game.currentCard - 1].image}`}
                         alt="card"
                       />
                     </>
@@ -188,42 +202,43 @@ export default function Home() {
               </div>
 
               <div className="flex justify-center">
-                {gameState === "waiting" && (
+                {game.state === "waiting" && (
                   <>
-                    {currentPlayer && !currentPlayer.ready ? (
+                    {player && !player.ready && (
                       <button
                         onClick={handlePlayerReady}
                         className="bg-green-800 hover:bg-green-700 cursor-pointer px-2 py-1 rounded-md font-semibold text-2xl"
                       >
                         Ready
                       </button>
-                    ) : (
-                      <>
-                        {currentPlayer?.owner && (
-                          <button
-                            onClick={handlePlayerReady}
-                            className="bg-blue-600 hover:bg-blue-500 cursor-pointer px-2 py-1 rounded-md font-semibold text-2xl disabled:bg-gray-500 disabled:cursor-not-allowed"
-                            disabled={!players.every((p) => p.ready)}
-                          >
-                            Start Game
-                          </button>
-                        )}
-                      </>
                     )}
                   </>
                 )}
               </div>
             </div>
 
-            <div className="absolute bottom-10 right-10 bg-white/10 rounded-md p-5">
-              <p className="text-xl font-semibold mb-5">
-                Players: ({players.length})
-              </p>
-              <div className="grid grid-rows-2">
-                {players.map((player, index) => (
+            <div className="absolute bottom-10 right-10 bg-white/10 rounded-md p-2 min-h-72 min-w-72">
+              <div className="flex justify-between items-end">
+                <div className="flex gap-1">
+                  <span className="cursor-pointer px-2 py-1 bg-slate-900 hover:bg-slate-700 rounded-md font-semibold">
+                    Players ({game.players.length})
+                  </span>
+                  <span className="cursor-pointer px-2 py-1 bg-slate-900 hover:bg-slate-700 rounded-md font-semibold">
+                    Chat
+                  </span>
+                </div>
+
+                <div>
+                  <span className="text-xs text-blue-500 cursor-pointer">
+                    Hide
+                  </span>
+                </div>
+              </div>
+              <div className="grid grid-rows-2 p-2">
+                {game.players.map((player, index) => (
                   <span className="text-xs" key={index}>
                     {player.username}{" "}
-                    {gameState === "waiting" && (
+                    {game.state === "waiting" && (
                       <span
                         className={`
                       font-bold
