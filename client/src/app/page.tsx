@@ -117,15 +117,21 @@ export default function Home() {
   };
 
   const handleMarkCard = (cardIndex: number) => {
-    setGame((prev) => ({
-      ...prev,
-      board: {
-        ...prev.board,
-        cards: (prev.board ? prev.board.cards : []).map((card, index) =>
-          index === cardIndex ? { ...card, isMarked: !card.isMarked } : card
-        ),
-      },
-    }));
+    if (!game.board) return;
+
+    const card = game.board.cards[cardIndex];
+
+    if (game.cardsCalled.includes(card.number)) {
+      setGame((prev) => ({
+        ...prev,
+        board: {
+          ...prev.board,
+          cards: (prev.board ? prev.board.cards : []).map((card, index) =>
+            index === cardIndex ? { ...card, isMarked: true } : card
+          ),
+        },
+      }));
+    }
   };
 
   return (
@@ -202,19 +208,19 @@ export default function Home() {
                     {game.board.cards.map((card, index) => (
                       <div
                         key={index}
-                        className="w-full h-full relative bg-blue-500 border border-black"
+                        className="w-full h-full relative bg-blue-500 border border-black cursor-pointer"
+                        onClick={() => {
+                          handleMarkCard(index);
+                        }}
                       >
                         <img
                           draggable={false}
-                          onClick={() => {
-                            handleMarkCard(index);
-                          }}
                           className="w-full h-full bg-white"
                           src={Cards[card.number - 1].image}
                           alt={Cards[card.number - 1].title}
                         />
                         {card.isMarked && (
-                          <span className="absolute w-full h-full bg-black/30 top-0 flex justify-center items-center text-red-700 text-8xl">
+                          <span className="absolute w-full h-full bg-black/70 top-0 flex justify-center items-center text-red-500 text-8xl">
                             X
                           </span>
                         )}
