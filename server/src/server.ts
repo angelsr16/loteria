@@ -155,7 +155,9 @@ const startGame = (room: Room) => {
     const number = deck[index++];
     room.numbersCalled.push(number);
     io.to(room.code).emit("numberCalled", number);
-  }, 3500); // Sends a card every second
+    console.log("Card Sent")
+  }, 700); // Sends a card every second
 };
+
 
 export { server };
