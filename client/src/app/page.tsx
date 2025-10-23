@@ -264,10 +264,19 @@ export default function Home() {
                     )}
 
                     {game.state === "finished" && (
-                      <div className="absolute top-0 left-0 w-full h-full bg-black/30 text-4xl font-bold flex justify-center items-center">
+                      <div className="absolute top-0 left-0 w-full h-full bg-black/30 text-4xl font-bold flex flex-col justify-center items-center">
                         <span className="text-5xl font-bold text-shadow-black text-shadow-lg">
                           GAME OVER
                         </span>
+
+                        <button
+                          onClick={() => {
+                            window.location.reload();
+                          }}
+                          className="bg-gray-700 text-3xl font-bold  hover:bg-gray-600 px-3 py-2 rounded-md cursor-pointer"
+                        >
+                          EXIT
+                        </button>
                       </div>
                     )}
                   </div>
@@ -356,7 +365,10 @@ export default function Home() {
             {displayHUD && (
               <div className="grid grid-rows-2 p-2">
                 {game.players.map((player, index) => (
-                  <span className="text-sm font-bold cursor-pointer" key={index}>
+                  <span
+                    className="text-sm font-bold cursor-pointer"
+                    key={index}
+                  >
                     <span className="underline">{player.username}</span>{" "}
                     {game.state === "waiting" && (
                       <span
