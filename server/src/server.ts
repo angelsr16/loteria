@@ -83,9 +83,30 @@ io.on("connection", (socket) => {
     if (player) player.ready = true;
 
     io.to(code).emit("updatePlayers", room.players);
-
+    io.to(socket.id).emit("setBoard", generateBoard());
     if (room.players.every((p) => p.ready) && room.status === "waiting") {
       startGame(room);
+    }
+  });
+
+  // Player claims Loteria
+  socket.on("claimLoteria", ({ code, playerBoard }) => {
+    const room = rooms.get(code);
+    if (!room) return;
+    const player = room.players.find((p) => p.id === socket.id);
+    if (!player) return;
+
+    const isBoardFull = playerBoard.every((cardNumber: number) =>
+      room.numbersCalled.includes(cardNumber)
+    );
+
+    if (isBoardFull) {
+      const player = room.players.find((p) => p.id === socket.id);
+      if (player) player.winner = true;
+
+      io.to(code).emit("updatePlayers", room.players);
+      io.to(code).emit("gameOver");
+      clearInterval(room.interval);
     }
   });
 
@@ -121,21 +142,20 @@ const startGame = (room: Room) => {
 
   const number = deck[index++];
   room.numbersCalled.push(number);
-  io.to(room.code).emit("gameStarted", generateBoard());
+  io.to(room.code).emit("gameStarted");
   io.to(room.code).emit("numberCalled", number);
 
   room.interval = setInterval(() => {
     if (index >= deck.length) {
       clearInterval(room.interval);
       room.status = "finished";
-      io.to(room.code).emit("gameOver", { winner: null });
       return;
     }
 
     const number = deck[index++];
     room.numbersCalled.push(number);
     io.to(room.code).emit("numberCalled", number);
-  }, 3500); // Sends a card every second
+  }, 500); // Sends a card every second
 };
 
 export { server };

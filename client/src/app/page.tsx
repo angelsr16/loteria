@@ -4,13 +4,14 @@ import { Game } from "@/types/Game";
 import { Player } from "@/types/Player";
 import { Cards } from "@/utils/cards";
 import { Card } from "@/types/Board";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 
 const SERVER_URL = "http://localhost:4000";
 
 export default function Home() {
   const [displayHUD, setDisplayHUD] = useState(true);
+  const [isBoardFull, setIsBoardFull] = useState(false);
 
   const [game, setGame] = useState<Game>({
     players: [],
@@ -25,6 +26,13 @@ export default function Home() {
     room: "",
     ready: false,
   });
+
+  useEffect(() => {
+    if (!game.board) return;
+
+    const isBoardFull = game.board.cards.every((card) => card.isMarked);
+    setIsBoardFull(isBoardFull);
+  }, [game.board]);
 
   const socketRef = useRef<Socket | null>(null);
 
@@ -52,11 +60,24 @@ export default function Home() {
       setPlayer(data.player);
     });
 
+    socket.on("setBoard", (data) => {
+      setGame((prev) => ({
+        ...prev,
+        board: data,
+      }));
+    });
+
     socket.on("gameStarted", (data) => {
       setGame((prev) => ({
         ...prev,
         state: "in-progress",
-        board: { ...data },
+      }));
+    });
+
+    socket.on("gameOver", () => {
+      setGame((prev) => ({
+        ...prev,
+        state: "finished",
       }));
     });
 
@@ -98,6 +119,19 @@ export default function Home() {
       const socket = connectSocket();
       socket.emit("playerReady", { code: player.room });
       player.ready = true;
+    }
+  };
+
+  const handleClaimLoteria = () => {
+    if (player && game.board) {
+      const socket = connectSocket();
+
+      const playerBoard = game.board.cards.map((card) => card.number);
+
+      socket.emit("claimLoteria", {
+        code: player.room,
+        playerBoard,
+      });
     }
   };
 
@@ -186,16 +220,19 @@ export default function Home() {
 
           <div className="w-2/3 h-full flex-1 flex lg:gap-5 ">
             {/* --- BOARD SECTION --- */}
+
             <div className="w-full flex lg:flex-row flex-col lg:gap-10 gap-5">
               <div className="w-full h-full flex justify-center items-center">
                 {game.board && (
-                  <div className="grid grid-cols-4 grid-rows-4 gap-1 bg-white xl:w-2/3 w-full h-full">
+                  <div className="relative grid grid-cols-4 grid-rows-4 gap-1 bg-white xl:w-2/3 w-full h-full">
                     {game.board.cards.map((card, index) => (
                       <div
                         key={index}
                         className="w-full h-full relative bg-blue-500 border border-black cursor-pointer"
                         onClick={() => {
-                          handleMarkCard(index);
+                          if (!card.isMarked && game.state === "in-progress") {
+                            handleMarkCard(index);
+                          }
                         }}
                       >
                         <img
@@ -205,24 +242,46 @@ export default function Home() {
                           alt={Cards[card.number - 1].title}
                         />
                         {card.isMarked && (
-                          <span className="absolute w-full h-full bg-black/70 top-0 flex justify-center items-center text-red-500 text-8xl">
+                          <span className="absolute w-full h-full bg-black/70 top-0 flex justify-center items-center text-red-500 md:text-8xl text-4xl">
                             X
                           </span>
                         )}
                       </div>
                     ))}
+
+                    {isBoardFull && (
+                      <div
+                        onClick={handleClaimLoteria}
+                        className="absolute top-0 left-0 w-full h-full bg-black/30 flex justify-center items-center"
+                      >
+                        <button
+                          disabled={game.state !== "in-progress"}
+                          className="disabled:bg-gray-500 text-3xl font-bold bg-green-700 hover:bg-green-600 px-3 py-2 rounded-md cursor-pointer"
+                        >
+                          LOTERIA
+                        </button>
+                      </div>
+                    )}
+
+                    {game.state === "finished" && (
+                      <div className="absolute top-0 left-0 w-full h-full bg-black/30 text-4xl font-bold flex justify-center items-center">
+                        <span className="text-5xl font-bold text-shadow-black text-shadow-lg">
+                          GAME OVER
+                        </span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
 
               <div className="h-full flex lg:flex-col flex-row gap-5 justify-center items-center">
                 {game.cardsCalled.length > 1 && (
-                  <div className="flex flex-col items-center rounded-md border border-slate-500 px-8 py-5">
+                  <div className="flex flex-col items-center rounded-md border border-slate-500 md:px-8 md:py-5 px-3 py-1">
                     <>
-                      <span className="font-semibold text-2xl text-center">
+                      <span className="font-semibold md:text-2xl text-lg text-center">
                         Anterior
                       </span>
-                      <div className="w-32">
+                      <div className="md:w-32 w-20">
                         <img
                           className="w-full p-1 bg-white"
                           src={`${
@@ -238,12 +297,12 @@ export default function Home() {
                 )}
 
                 {game.currentCard !== -1 && (
-                  <div className="flex flex-col items-center rounded-md border border-slate-500 px-8 py-5">
+                  <div className="flex flex-col items-center rounded-md border border-slate-500 md:px-8 md:py-5 px-3 py-1">
                     <>
-                      <span className="font-semibold text-2xl text-center">
+                      <span className="font-semibold md:text-2xl text-lg text-center">
                         Actual
                       </span>
-                      <div className="w-32">
+                      <div className="md:w-32 w-20">
                         <img
                           className="w-full p-1 bg-white"
                           src={`${Cards[game.currentCard - 1].image}`}
@@ -280,9 +339,9 @@ export default function Home() {
                 <span className="text-sm cursor-pointer px-2 py-1 bg-slate-900 hover:bg-slate-700 rounded-md font-semibold">
                   Players ({game.players.length})
                 </span>
-                <span className="text-sm cursor-pointer px-2 py-1 bg-slate-900 hover:bg-slate-700 rounded-md font-semibold">
+                {/* <span className="text-sm cursor-pointer px-2 py-1 bg-slate-900 hover:bg-slate-700 rounded-md font-semibold">
                   Chat
-                </span>
+                </span> */}
               </div>
 
               <div>
@@ -297,7 +356,7 @@ export default function Home() {
             {displayHUD && (
               <div className="grid grid-rows-2 p-2">
                 {game.players.map((player, index) => (
-                  <span className="text-sm font-bold" key={index}>
+                  <span className="text-sm font-bold cursor-pointer" key={index}>
                     <span className="underline">{player.username}</span>{" "}
                     {game.state === "waiting" && (
                       <span
@@ -305,7 +364,17 @@ export default function Home() {
                       font-bold
                       ${player.ready ? "text-green-500" : "text-yellow-500"}`}
                       >
-                        ({player.ready ? "ready" : "waiting..."})
+                        {player.ready ? "(ready)" : "(waiting...)"}
+                      </span>
+                    )}
+                    {game.state === "finished" && (
+                      <span
+                        className={`
+                          
+                          font-bold
+                      ${player.winner && "text-green-500"}`}
+                      >
+                        {player.winner && "(WINNER)"}
                       </span>
                     )}
                   </span>
