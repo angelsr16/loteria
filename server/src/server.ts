@@ -22,7 +22,7 @@ const rooms = new Map<string, Room>();
 const players = new Map<string, Player>();
 
 io.on("connection", (socket) => {
-  console.log("New client connected:", socket.id);
+  // console.log("New client connected:", socket.id);
 
   // Create room
   socket.on("createRoom", ({ username }) => {
@@ -155,9 +155,7 @@ const startGame = (room: Room) => {
     const number = deck[index++];
     room.numbersCalled.push(number);
     io.to(room.code).emit("numberCalled", number);
-    console.log("Card Sent")
-  }, 700); // Sends a card every second
+  }, 3700); // Sends a card every second
 };
-
 
 export { server };
