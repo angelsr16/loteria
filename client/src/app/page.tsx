@@ -36,7 +36,7 @@ export default function Home() {
 
   const connectSocket = useCallback((onConnect?: (socket: any) => void) => {
     if (socketRef.current) return socketRef.current;
-    console.log(process.env.NEXT_PUBLIC_SERVER_URL);
+
     const socket = io(process.env.NEXT_PUBLIC_SERVER_URL);
 
     if (onConnect) {
