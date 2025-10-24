@@ -7,8 +7,6 @@ import { Card } from "@/types/Board";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 
-const SERVER_URL = "http://localhost:4000";
-
 export default function Home() {
   const [displayHUD, setDisplayHUD] = useState(true);
   const [isBoardFull, setIsBoardFull] = useState(false);
@@ -38,7 +36,8 @@ export default function Home() {
 
   const connectSocket = useCallback((onConnect?: (socket: any) => void) => {
     if (socketRef.current) return socketRef.current;
-    const socket = io(SERVER_URL);
+    console.log(process.env.NEXT_PUBLIC_SERVER_URL);
+    const socket = io(process.env.NEXT_PUBLIC_SERVER_URL);
 
     if (onConnect) {
       socket.on("connect", () => {

@@ -10,12 +10,14 @@ import { generateBoard } from "./utils/generateBoard";
 
 const app = express();
 
-// app.use(cors());
+app.use(cors());
 app.get("/", (req: Request, res: Response) => res.send("Hello Lotería"));
 
 const server = http.createServer(app);
 const io = new Server(server, {
-  // cors: { origin: "*" },
+  cors: {
+    origin: ["https://loteria-five-orpin.vercel.app", "http://localhost:3000"],
+  },
 });
 
 const rooms = new Map<string, Room>();
