@@ -10,12 +10,12 @@ import { generateBoard } from "./utils/generateBoard";
 
 const app = express();
 
-app.use(cors());
+// app.use(cors());
 app.get("/", (req: Request, res: Response) => res.send("Hello Lotería"));
 
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: { origin: "*" },
+  // cors: { origin: "*" },
 });
 
 const rooms = new Map<string, Room>();
@@ -155,7 +155,7 @@ const startGame = (room: Room) => {
     const number = deck[index++];
     room.numbersCalled.push(number);
     io.to(room.code).emit("numberCalled", number);
-  }, 3700); // Sends a card every second
+  }, 3700);
 };
 
 export { server };
