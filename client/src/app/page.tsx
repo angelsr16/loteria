@@ -338,7 +338,7 @@ export default function Home() {
           )}
 
           <div
-            className={`fixed z-100 bottom-5 right-5 bg-white/10 rounded-md p-2 ${
+            className={`fixed z-100 bottom-5 right-5 bg-gray-800 rounded-md p-2 ${
               displayHUD && "min-h-64 min-w-72"
             }`}
           >
