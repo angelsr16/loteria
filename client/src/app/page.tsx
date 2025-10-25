@@ -152,8 +152,10 @@ export default function Home() {
     }
   };
 
+  
+
   return (
-    <>
+    <div className="bg-stone-900">
       {game.state === "no-game" ? (
         <div className="flex justify-center items-center h-screen">
           <div className="xl:w-1/3 md:w-1/2 mx-10 w-full border-slate-600 border rounded-md md:p-10 p-4">
@@ -395,6 +397,6 @@ export default function Home() {
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }
