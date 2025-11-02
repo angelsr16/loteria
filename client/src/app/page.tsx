@@ -152,251 +152,269 @@ export default function Home() {
     }
   };
 
-  
-
   return (
-    <div className="bg-stone-900">
-      {game.state === "no-game" ? (
-        <div className="flex justify-center items-center h-screen">
-          <div className="xl:w-1/3 md:w-1/2 mx-10 w-full border-slate-600 border rounded-md md:p-10 p-4">
-            <div className="flex flex-col gap-3">
-              <input
-                type="text"
-                className="px-2 py-1 md:text-xl bg-transparent outline-none border-slate-800 border rounded-md"
-                placeholder="Username"
-                value={player.username}
-                onChange={(evt) => {
-                  setPlayer((prev) => ({
-                    ...prev,
-                    username: evt.target.value,
-                  }));
-                }}
-                maxLength={25}
-              />
-
-              <hr className="text-slate-600 mt-2 mb-4" />
-              <button
-                type="button"
-                className="md:text-xl font-semibold bg-slate-800 rounded-md px-2 py-1 cursor-pointer hover:bg-slate-700 disabled:bg-gray-700 disabled:cursor-not-allowed"
-                disabled={player.username === ""}
-                onClick={handleCreateGame}
-              >
-                CREATE GAME
-              </button>
-
-              <div className="w-full flex gap-2">
+    <div className="bg-[url('/loteria-bg.jpg')] relative">
+      <div className="absolute inset-0 bg-black/80"></div>
+      <div className="relative z-10">
+        {game.state === "no-game" ? (
+          <div className="z-10 flex justify-center items-center h-screen">
+            <div
+              className="xl:w-1/3 md:w-1/2 mx-10 w-full border-black border-2 rounded-md p-10 bg-white"
+              style={{ boxShadow: "rgba(0, 0, 0, 0.35) 0px 5px 15px" }}
+            >
+              <h2 className="text-3xl font-black text-black text-center pb-10">LOTERÍA MEXICANA</h2>
+              <div className="flex flex-col gap-3">
                 <input
                   type="text"
-                  className="w-full px-2 py-1 md:text-xl bg-transparent outline-none border-slate-800 border rounded-md"
-                  placeholder="Join Code"
-                  value={player.room}
+                  className="px-2 py-1 md:text-xl outline-none border-slate-800 border rounded-md text-black"
+                  placeholder="NOMBRE DEL JUGADOR"
+                  value={player.username}
                   onChange={(evt) => {
-                    setPlayer((prev) => ({ ...prev, room: evt.target.value }));
+                    setPlayer((prev) => ({
+                      ...prev,
+                      username: evt.target.value,
+                    }));
                   }}
-                  maxLength={5}
+                  maxLength={25}
                 />
 
+                <hr className="text-slate-600 mt-2 mb-4" />
                 <button
-                  className="w-full md:text-xl font-semibold bg-slate-800 rounded-md px-2 py-1 cursor-pointer hover:bg-slate-700 disabled:bg-gray-700 disabled:cursor-not-allowed"
-                  disabled={
-                    player.room === "" ||
-                    player.room.length < 5 ||
-                    player.username === ""
-                  }
-                  onClick={handleJoinGame}
+                  type="button"
+                  className="md:text-xl font-semibold bg-slate-800 rounded-md px-2 py-1 cursor-pointer hover:bg-slate-700 disabled:bg-gray-500 disabled:cursor-not-allowed"
+                  disabled={player.username === ""}
+                  onClick={handleCreateGame}
                 >
-                  JOIN GAME
+                  CREAR SALA
                 </button>
+
+                <div className="w-full flex gap-2">
+                  <input
+                    type="text"
+                    className="w-full px-2 py-1 md:text-xl bg-transparent outline-none border-slate-800 border rounded-md text-black"
+                    placeholder="CÓDIGO DE SALA"
+                    value={player.room}
+                    onChange={(evt) => {
+                      setPlayer((prev) => ({
+                        ...prev,
+                        room: evt.target.value,
+                      }));
+                    }}
+                    maxLength={5}
+                  />
+
+                  <button
+                    className="w-full md:text-xl font-semibold bg-slate-800 rounded-md px-2 py-1 cursor-pointer hover:bg-slate-700 disabled:bg-gray-500 disabled:cursor-not-allowed"
+                    disabled={
+                      player.room === "" ||
+                      player.room.length < 5 ||
+                      player.username === ""
+                    }
+                    onClick={handleJoinGame}
+                  >
+                    UNIRSE
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      ) : (
-        <div className="w-full h-screen flex flex-col items-center md:p-10 p-5">
-          {game.state === "waiting" && (
-            <h1 className="text-3xl mb-5">
-              Room Code: <span className="font-semibold">{player.room}</span>
-            </h1>
-          )}
+        ) : (
+          <div className="w-full h-screen flex flex-col items-center md:p-10 p-5">
+            {game.state === "waiting" && (
+              <h1
+                className="text-3xl mb-5 font-bold"
+                style={{
+                  textShadow: "3px 3px 20px rgba(0,0,0)",
+                }}
+              >
+                CÓDIGO DE SALA:{" "}
+                <span className="font-semibold">{player.room}</span>
+              </h1>
+            )}
 
-          <div className="w-2/3 h-full flex-1 flex lg:gap-5 ">
-            {/* --- BOARD SECTION --- */}
+            <div className="w-2/3 h-full flex-1 flex lg:gap-5 ">
+              {/* --- BOARD SECTION --- */}
 
-            <div className="w-full flex lg:flex-row flex-col lg:gap-10 gap-5">
-              <div className="w-full h-full flex justify-center items-center">
-                {game.board && (
-                  <div className="relative grid grid-cols-4 grid-rows-4 gap-1 bg-white xl:w-2/3 w-full h-full">
-                    {game.board.cards.map((card, index) => (
-                      <div
-                        key={index}
-                        className="w-full h-full relative bg-blue-500 border border-black cursor-pointer"
-                        onClick={() => {
-                          if (!card.isMarked && game.state === "in-progress") {
-                            handleMarkCard(index);
-                          }
-                        }}
-                      >
-                        <img
-                          draggable={false}
-                          className="w-full h-full bg-white"
-                          src={Cards[card.number - 1].image}
-                          alt={Cards[card.number - 1].title}
-                        />
-                        {card.isMarked && (
-                          <span className="absolute w-full h-full bg-black/70 top-0 flex justify-center items-center text-red-500 md:text-8xl text-4xl">
-                            X
-                          </span>
-                        )}
-                      </div>
-                    ))}
-
-                    {isBoardFull && (
-                      <div
-                        onClick={handleClaimLoteria}
-                        className="absolute top-0 left-0 w-full h-full bg-black/30 flex justify-center items-center"
-                      >
-                        <button
-                          disabled={game.state !== "in-progress"}
-                          className="disabled:bg-gray-500 text-3xl font-bold bg-green-700 hover:bg-green-600 px-3 py-2 rounded-md cursor-pointer"
-                        >
-                          LOTERIA
-                        </button>
-                      </div>
-                    )}
-
-                    {game.state === "finished" && (
-                      <div className="absolute top-0 left-0 w-full h-full bg-black/30 text-4xl font-bold flex flex-col justify-center items-center">
-                        <span className="text-5xl font-bold text-shadow-black text-shadow-lg">
-                          GAME OVER
-                        </span>
-
-                        <button
+              <div className="w-full flex lg:flex-row flex-col lg:gap-10 gap-5">
+                <div className="w-full h-full flex justify-center items-center">
+                  {game.board && (
+                    <div className="relative grid grid-cols-4 grid-rows-4 gap-1 bg-white xl:w-2/3 w-full h-full">
+                      {game.board.cards.map((card, index) => (
+                        <div
+                          key={index}
+                          className="w-full h-full relative bg-blue-500 border border-black cursor-pointer"
                           onClick={() => {
-                            window.location.reload();
+                            if (
+                              !card.isMarked &&
+                              game.state === "in-progress"
+                            ) {
+                              handleMarkCard(index);
+                            }
                           }}
-                          className="bg-gray-700 text-3xl font-bold  hover:bg-gray-600 px-3 py-2 rounded-md cursor-pointer"
                         >
-                          EXIT
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+                          <img
+                            draggable={false}
+                            className="w-full h-full bg-white"
+                            src={Cards[card.number - 1].image}
+                            alt={Cards[card.number - 1].title}
+                          />
+                          {card.isMarked && (
+                            <span className="absolute w-full h-full bg-black/70 top-0 flex justify-center items-center text-red-500 md:text-8xl text-4xl">
+                              X
+                            </span>
+                          )}
+                        </div>
+                      ))}
 
-              <div className="h-full flex lg:flex-col flex-row gap-5 justify-center items-center">
-                {game.cardsCalled.length > 1 && (
-                  <div className="flex flex-col items-center rounded-md border border-slate-500 md:px-8 md:py-5 px-3 py-1">
-                    <>
-                      <span className="font-semibold md:text-2xl text-lg text-center">
-                        Anterior
-                      </span>
-                      <div className="md:w-32 w-20">
-                        <img
-                          className="w-full p-1 bg-white"
-                          src={`${
-                            Cards[
-                              game.cardsCalled[game.cardsCalled.length - 2] - 1
-                            ].image
-                          }`}
-                          alt="card"
-                        />
-                      </div>
-                    </>
-                  </div>
-                )}
+                      {isBoardFull && (
+                        <div
+                          onClick={handleClaimLoteria}
+                          className="absolute top-0 left-0 w-full h-full bg-black/30 flex justify-center items-center"
+                        >
+                          <button
+                            disabled={game.state !== "in-progress"}
+                            className="disabled:bg-gray-500 text-3xl font-bold bg-green-700 hover:bg-green-600 px-3 py-2 rounded-md cursor-pointer"
+                          >
+                            LOTERIA
+                          </button>
+                        </div>
+                      )}
 
-                {game.currentCard !== -1 && (
-                  <div className="flex flex-col items-center rounded-md border border-slate-500 md:px-8 md:py-5 px-3 py-1">
-                    <>
-                      <span className="font-semibold md:text-2xl text-lg text-center">
-                        Actual
-                      </span>
-                      <div className="md:w-32 w-20">
-                        <img
-                          className="w-full p-1 bg-white"
-                          src={`${Cards[game.currentCard - 1].image}`}
-                          alt="card"
-                        />
-                      </div>
-                    </>
-                  </div>
-                )}
+                      {game.state === "finished" && (
+                        <div className="absolute top-0 left-0 w-full h-full bg-black/30 text-4xl font-bold flex flex-col justify-center items-center">
+                          <span className="text-5xl font-bold text-shadow-black text-shadow-lg">
+                            JUEGO FINALIZADO
+                          </span>
+
+                          <button
+                            onClick={() => {
+                              window.location.reload();
+                            }}
+                            className="bg-gray-700 text-3xl font-bold  hover:bg-gray-600 px-3 py-2 rounded-md cursor-pointer"
+                          >
+                            EXIT
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="h-full flex lg:flex-col flex-row gap-5 justify-center items-center">
+                  {game.cardsCalled.length > 1 && (
+                    <div className="flex flex-col items-center rounded-md border-4 bg-white border-black md:px-8 md:py-5 px-3 py-1">
+                      <>
+                        <span className="font-semibold md:text-2xl text-lg text-center text-black">
+                          Anterior
+                        </span>
+                        <div className="md:w-32 w-20">
+                          <img
+                            className="w-full p-1 bg-white"
+                            src={`${
+                              Cards[
+                                game.cardsCalled[game.cardsCalled.length - 2] -
+                                  1
+                              ].image
+                            }`}
+                            alt="card"
+                          />
+                        </div>
+                      </>
+                    </div>
+                  )}
+
+                  {game.currentCard !== -1 && (
+                    <div className="flex flex-col items-center rounded-md border-4 bg-white border-black md:px-8 md:py-5 px-3 py-1">
+                      <>
+                        <span className="font-semibold md:text-2xl text-lg text-center text-black">
+                          Actual
+                        </span>
+                        <div className="md:w-32 w-20">
+                          <img
+                            className="w-full p-1 bg-white"
+                            src={`${Cards[game.currentCard - 1].image}`}
+                            alt="card"
+                          />
+                        </div>
+                      </>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
 
-          {game.state === "waiting" && (
-            <div className="flex justify-center">
-              {player && !player.ready && (
-                <button
-                  onClick={handlePlayerReady}
-                  className="bg-green-800 hover:bg-green-700 cursor-pointer px-2 py-1 rounded-md font-semibold text-2xl"
-                >
-                  Ready
-                </button>
-              )}
-            </div>
-          )}
+            {game.state === "waiting" && (
+              <div className="flex justify-center">
+                {player && !player.ready && (
+                  <button
+                    onClick={handlePlayerReady}
+                    className="bg-green-700 hover:bg-green-800 cursor-pointer px-3 py-2 rounded-md font-semibold text-3xl"
+                  >
+                    LISTO
+                  </button>
+                )}
+              </div>
+            )}
 
-          <div
-            className={`fixed z-100 bottom-5 right-5 bg-gray-800 rounded-md p-2 ${
-              displayHUD && "min-h-64 min-w-72"
-            }`}
-          >
-            <div className="flex justify-between items-end gap-5">
-              <div className="flex gap-1">
-                <span className="text-sm cursor-pointer px-2 py-1 bg-slate-900 hover:bg-slate-700 rounded-md font-semibold">
-                  Players ({game.players.length})
-                </span>
-                {/* <span className="text-sm cursor-pointer px-2 py-1 bg-slate-900 hover:bg-slate-700 rounded-md font-semibold">
+            <div
+              className={`fixed z-100 bottom-5 right-5 bg-gray-800 rounded-md p-2 ${
+                displayHUD && "min-h-64 min-w-72"
+              }`}
+            >
+              <div className="flex justify-between items-end gap-5">
+                <div className="flex gap-1">
+                  <span className="text-sm cursor-pointer px-2 py-1 bg-slate-900 hover:bg-slate-700 rounded-md font-semibold">
+                    Jugadores ({game.players.length})
+                  </span>
+                  {/* <span className="text-sm cursor-pointer px-2 py-1 bg-slate-900 hover:bg-slate-700 rounded-md font-semibold">
                   Chat
                 </span> */}
-              </div>
+                </div>
 
-              <div>
-                <span
-                  onClick={() => setDisplayHUD(!displayHUD)}
-                  className="text-xs text-blue-500 cursor-pointer"
-                >
-                  {!displayHUD ? "Show" : "Hide"}
-                </span>
-              </div>
-            </div>
-            {displayHUD && (
-              <div className="grid grid-rows-2 p-2">
-                {game.players.map((player, index) => (
+                <div>
                   <span
-                    className="text-sm font-bold cursor-pointer"
-                    key={index}
+                    onClick={() => setDisplayHUD(!displayHUD)}
+                    className="text-xs text-blue-500 cursor-pointer"
                   >
-                    <span className="underline">{player.username}</span>{" "}
-                    {game.state === "waiting" && (
-                      <span
-                        className={`
+                    {!displayHUD ? "Mostrar" : "Ocultar"}
+                  </span>
+                </div>
+              </div>
+              {displayHUD && (
+                <div className="grid grid-rows-2 p-2">
+                  {game.players.map((player, index) => (
+                    <span
+                      className="text-sm font-bold cursor-pointer"
+                      key={index}
+                    >
+                      <span className="underline">{player.username}</span>{" "}
+                      {game.state === "waiting" && (
+                        <span
+                          className={`
                       font-bold
                       ${player.ready ? "text-green-500" : "text-yellow-500"}`}
-                      >
-                        {player.ready ? "(ready)" : "(waiting...)"}
-                      </span>
-                    )}
-                    {game.state === "finished" && (
-                      <span
-                        className={`
+                        >
+                          {player.ready ? "(listo)" : "esperando...)"}
+                        </span>
+                      )}
+                      {game.state === "finished" && (
+                        <span
+                          className={`
                           
                           font-bold
                       ${player.winner && "text-green-500"}`}
-                      >
-                        {player.winner && "(WINNER)"}
-                      </span>
-                    )}
-                  </span>
-                ))}
-              </div>
-            )}
+                        >
+                          {player.winner && "(WINNER)"}
+                        </span>
+                      )}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
